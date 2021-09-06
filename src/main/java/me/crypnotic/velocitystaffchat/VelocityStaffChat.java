@@ -13,25 +13,25 @@ import org.slf4j.Logger;
 
 import com.google.inject.Inject;
 import com.moandjiezana.toml.Toml;
-import com.velocitypowered.api.command.Command;
+import com.velocitypowered.api.command.CommandMeta;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent.ChatResult;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
-import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
+import com.velocitypowered.api.command.SimpleCommand;
 
 import lombok.Getter;
-import net.kyori.text.TextComponent;
-import net.kyori.text.format.TextColor;
-import net.kyori.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
-@Plugin(id = BuildInfo.PLUGIN_ID, name = BuildInfo.PLUGIN_NAME, version = BuildInfo.PLUGIN_VERSION)
-public class VelocityStaffChat implements Command {
+public class VelocityStaffChat implements SimpleCommand {
 
     @Inject
     @Getter
@@ -61,7 +61,11 @@ public class VelocityStaffChat implements Command {
         this.toggleFormat = toml.getString("toggle-format");
         this.toggledPlayers = new HashSet<UUID>();
 
-        proxy.getCommandManager().register(this, "staffchat", "sc");
+        CommandMeta meta = proxy.getCommandManager().metaBuilder("staffchat")
+            .aliases("sc")
+            .build();
+
+        proxy.getCommandManager().register(meta, this);
     }
 
     private Toml loadConfig(Path path) {
@@ -88,7 +92,9 @@ public class VelocityStaffChat implements Command {
     }
 
     @Override
-    public void execute(CommandSource source, String[] args) {
+    public void execute(final Invocation invocation) {
+        CommandSource source = invocation.source();
+        String[] args = invocation.arguments();
         if (source instanceof Player) {
             Player player = (Player) source;
             if (player.hasPermission("staffchat")) {
@@ -104,10 +110,10 @@ public class VelocityStaffChat implements Command {
                     sendStaffMessage(player, player.getCurrentServer().get(), String.join(" ", args));
                 }
             } else {
-                player.sendMessage(TextComponent.of("Permission denied.").color(TextColor.RED));
+                player.sendMessage(Component.text("Permission denied.").color(NamedTextColor.RED));
             }
         } else {
-            source.sendMessage(TextComponent.of("Only players can use this command."));
+            source.sendMessage(Component.text("Only players can use this command."));
         }
     }
 
@@ -135,6 +141,6 @@ public class VelocityStaffChat implements Command {
     }
 
     private TextComponent color(String text) {
-        return LegacyComponentSerializer.INSTANCE.deserialize(text, '&');
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
 }

@@ -1,0 +1,11 @@
+{
+    "id": "${project.artifactId}",
+    "name": "${project.name}",
+    "version": "${project.version}",
+    "description": "A chat for your staff",
+    "authors": [
+      "Crypnotic"
+    ],
+    "dependencies": [],
+    "main": "me.crypnotic.velocitystaffchat.VelocityStaffChat"
+  }

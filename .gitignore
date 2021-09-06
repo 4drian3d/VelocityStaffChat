@@ -11,6 +11,14 @@
 
 nbproject
 
+# Visual Studio Code
+
+.settings/
+.classpath
+.factorypath
+.project
+.vscode/
+
 # Maven #
 build.xml
 target
