@@ -1,6 +1,5 @@
 package me.crypnotic.velocitystaffchat;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -14,7 +13,6 @@ import org.slf4j.Logger;
 import com.google.inject.Inject;
 import com.moandjiezana.toml.Toml;
 import com.velocitypowered.api.command.CommandMeta;
-import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent.ChatResult;
@@ -22,14 +20,13 @@ import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
-import com.velocitypowered.api.proxy.ServerConnection;
-import com.velocitypowered.api.command.SimpleCommand;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
-public class VelocityStaffChat implements SimpleCommand {
+public final class VelocityStaffChat {
 
     @Inject
     private ProxyServer proxy;
@@ -37,17 +34,19 @@ public class VelocityStaffChat implements SimpleCommand {
     private Logger logger;
     @Inject
     @DataDirectory
-    private Path configPath;
+    private Path configFolder;
 
     private String messageFormat;
     private String toggleFormat;
-    private Set<UUID> toggledPlayers;
+    private String enabledFormat;
+    private String disabledFormat;
+    Set<UUID> toggledPlayers;
 
     private static final MiniMessage MINIMESSAGE = MiniMessage.miniMessage();
 
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
-        Toml toml = loadConfig(configPath);
+        Toml toml = loadConfig();
         if (toml == null) {
             logger.warn("Failed to load config.toml. Shutting down.");
             return;
@@ -55,61 +54,43 @@ public class VelocityStaffChat implements SimpleCommand {
 
         this.messageFormat = toml.getString("message-format");
         this.toggleFormat = toml.getString("toggle-format");
+        this.enabledFormat = toml.getString("enabled-format", "enabled");
+        this.disabledFormat = toml.getString("disabled-format", "disabled");
         this.toggledPlayers = new HashSet<>();
 
         CommandMeta meta = proxy.getCommandManager().metaBuilder("staffchat")
             .aliases("sc")
             .build();
 
-        proxy.getCommandManager().register(meta, this);
+        proxy.getCommandManager().register(meta, new StaffChatCommand(this));
     }
 
-    private Toml loadConfig(Path path) {
-        File folder = path.toFile();
-        File file = new File(folder, "config.toml");
-        if (!file.getParentFile().exists()) {
-            file.getParentFile().mkdirs();
+    private Toml loadConfig() {
+        if (!Files.exists(configFolder)) {
+            try{
+                Files.createDirectory(configFolder);
+            } catch(IOException e) {
+                e.printStackTrace();
+                return null;
+            }
         }
 
-        if (!file.exists()) {
-            try (InputStream input = getClass().getResourceAsStream("/" + file.getName())) {
-                if (input != null) {
-                    Files.copy(input, file.toPath());
-                } else {
-                    file.createNewFile();
-                }
+        Path configPath = configFolder.resolve("config.toml");
+
+        if (!Files.exists(configPath)) {
+            try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.toml")) {
+                Files.copy(input, configPath);
             } catch (IOException exception) {
                 exception.printStackTrace();
                 return null;
             }
         }
 
-        return new Toml().read(file);
-    }
-
-    @Override
-    public void execute(final Invocation invocation) {
-        CommandSource source = invocation.source();
-        String[] args = invocation.arguments();
-        if (source instanceof Player) {
-            Player player = (Player) source;
-            if (player.hasPermission("staffchat")) {
-                if (args.length == 0) {
-                    if (toggledPlayers.contains(player.getUniqueId())) {
-                        toggledPlayers.remove(player.getUniqueId());
-                        sendToggleMessage(player, false);
-                    } else {
-                        toggledPlayers.add(player.getUniqueId());
-                        sendToggleMessage(player, true);
-                    }
-                } else {
-                    sendStaffMessage(player, player.getCurrentServer().get(), String.join(" ", args));
-                }
-            } else {
-                player.sendMessage(Component.text("Permission denied.").color(NamedTextColor.RED));
-            }
-        } else {
-            source.sendMessage(Component.text("Only players can use this command."));
+        try {
+            return new Toml().read(Files.newInputStream(configPath));
+        } catch (IOException e){
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -121,18 +102,23 @@ public class VelocityStaffChat implements SimpleCommand {
         }
 
         event.setResult(ChatResult.denied());
-
-        sendStaffMessage(player, player.getCurrentServer().get(), event.getMessage());
+        sendStaffMessage(player, event.getMessage());
     }
 
-    private void sendToggleMessage(Player player, boolean state) {
-        player.sendMessage(MINIMESSAGE.deserialize(toggleFormat.replace("{state}", state ? "enabled" : "disabled")));
+    void sendToggleMessage(Player player, boolean state) {
+        player.sendMessage(MINIMESSAGE.deserialize(toggleFormat, Placeholder.unparsed("state", state ? enabledFormat : disabledFormat)));
     }
 
-    private void sendStaffMessage(Player player, ServerConnection server, String message) {
-        proxy.getAllPlayers().stream().filter(target -> target.hasPermission("staffchat")).forEach(target -> {
-            target.sendMessage(MINIMESSAGE.deserialize(messageFormat.replace("{player}", player.getUsername())
-                    .replace("{server}", server != null ? server.getServerInfo().getName() : "N/A").replace("{message}", message)));
-        });
+    void sendStaffMessage(Player player, String message) {
+        Component staffMessage = MiniMessage.miniMessage().deserialize(messageFormat, TagResolver.resolver(
+            Placeholder.unparsed("player", player.getUsername()),
+            Placeholder.unparsed("server", player.getCurrentServer().map(con -> con.getServerInfo().getName()).orElse("N/A")),
+            Placeholder.unparsed("message", message)
+        ));
+        for(Player pl : proxy.getAllPlayers()){
+            if(pl.hasPermission("staffchat")){
+                pl.sendMessage(staffMessage);
+            }
+        }
     }
 }

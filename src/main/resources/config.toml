@@ -1,2 +1,12 @@
-message-format = "<dark_gray>[<gold>Staff</gold>] <aqua>{player}</aqua> [<gold>{server}</gold>]</dark_gray><gray>:</gray> <aqua>{message}"
-toggle-format = "<gold>Staff chat is now <i>{state}"
+# Placeholders:
+# <player> The player's name
+# <server> The server on which the message was written
+# <message> the message
+message-format = "<dark_gray>[<gold>Staff</gold>] <aqua><player></aqua> [<gold><server></gold>]</dark_gray><gray>:</gray> <aqua><message>"
+# Placeholder:
+# <state> The StaffChat new state
+toggle-format = "<gold>Staff chat is now <i><state>"
+
+# Used in Placeholder <state> in toggle-format
+enabled-format = "enabled"
+disabled-format = "disabled"
