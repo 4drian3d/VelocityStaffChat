@@ -17,6 +17,7 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent.ChatResult;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -26,6 +27,12 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
+@Plugin(
+    id = BuildInfo.PLUGIN_ID,
+    name = BuildInfo.PLUGIN_NAME,
+    version = BuildInfo.PLUGIN_VERSION,
+    authors = {"Crypnotic", "4drian3d"}
+)
 public final class VelocityStaffChat {
 
     @Inject
