@@ -25,33 +25,29 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.command.SimpleCommand;
 
-import lombok.Getter;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class VelocityStaffChat implements SimpleCommand {
 
     @Inject
-    @Getter
     private ProxyServer proxy;
     @Inject
-    @Getter
     private Logger logger;
     @Inject
-    @Getter
     @DataDirectory
     private Path configPath;
 
-    private Toml toml;
     private String messageFormat;
     private String toggleFormat;
     private Set<UUID> toggledPlayers;
 
+    private static final MiniMessage MINIMESSAGE = MiniMessage.miniMessage();
+
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
-        this.toml = loadConfig(configPath);
+        Toml toml = loadConfig(configPath);
         if (toml == null) {
             logger.warn("Failed to load config.toml. Shutting down.");
             return;
@@ -59,7 +55,7 @@ public class VelocityStaffChat implements SimpleCommand {
 
         this.messageFormat = toml.getString("message-format");
         this.toggleFormat = toml.getString("toggle-format");
-        this.toggledPlayers = new HashSet<UUID>();
+        this.toggledPlayers = new HashSet<>();
 
         CommandMeta meta = proxy.getCommandManager().metaBuilder("staffchat")
             .aliases("sc")
@@ -130,17 +126,13 @@ public class VelocityStaffChat implements SimpleCommand {
     }
 
     private void sendToggleMessage(Player player, boolean state) {
-        player.sendMessage(color(toggleFormat.replace("{state}", state ? "enabled" : "disabled")));
+        player.sendMessage(MINIMESSAGE.deserialize(toggleFormat.replace("{state}", state ? "enabled" : "disabled")));
     }
 
     private void sendStaffMessage(Player player, ServerConnection server, String message) {
         proxy.getAllPlayers().stream().filter(target -> target.hasPermission("staffchat")).forEach(target -> {
-            target.sendMessage(color(messageFormat.replace("{player}", player.getUsername())
+            target.sendMessage(MINIMESSAGE.deserialize(messageFormat.replace("{player}", player.getUsername())
                     .replace("{server}", server != null ? server.getServerInfo().getName() : "N/A").replace("{message}", message)));
         });
-    }
-
-    private TextComponent color(String text) {
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(text);
     }
 }

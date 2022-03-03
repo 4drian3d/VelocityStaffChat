@@ -1,2 +1,2 @@
-message-format = "&8[&6Staff&8] &b{player} &8[&6{server}&8]&7: &b{message}"
-toggle-format = "&6Staff chat is now &o{state}"
+message-format = "<dark_gray>[<gold>Staff</gold>] <aqua>{player}</aqua> [<gold>{server}</gold>]</dark_gray><gray>:</gray> <aqua>{message}"
+toggle-format = "<gold>Staff chat is now <i>{state}"
