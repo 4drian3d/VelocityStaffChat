@@ -31,6 +31,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
     id = BuildInfo.PLUGIN_ID,
     name = BuildInfo.PLUGIN_NAME,
     version = BuildInfo.PLUGIN_VERSION,
+    description = BuildInfo.PLUGIN_DESCRIPTION,
     authors = {"Crypnotic", "4drian3d"}
 )
 public final class VelocityStaffChat {
